@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AR Line Overlay — Heritage Site Annotation</title>
+<style>
+  body {
+    margin: 0;
+    background: #0d1117;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #e6edf3;
+    padding: 30px 0;
+  }
+  h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; color: #d4af37; }
+  .stage {
+    position: relative;
+    width: 800px;
+    max-width: 92vw;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(212,175,55,0.15);
+  }
+  .stage img {
+    width: 100%;
+    display: block;
+    filter: brightness(0.9) contrast(1.05);
+  }
+  svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .ar-line {
+    stroke: #39ff8f;
+    stroke-width: 2;
+    fill: none;
+    filter: drop-shadow(0 0 4px #39ff8f);
+    stroke-dasharray: 6 4;
+    animation: dash 1.2s linear infinite;
+  }
+  @keyframes dash { to { stroke-dashoffset: -20; } }
+  .node {
+    fill: #39ff8f;
+    filter: drop-shadow(0 0 6px #39ff8f);
+  }
+  .label {
+    fill: #39ff8f;
+    font-size: 13px;
+    font-family: 'Consolas', monospace;
+    text-shadow: 0 0 4px #000;
+  }
+  .label-bg {
+    fill: rgba(0,0,0,0.55);
+    stroke: #39ff8f;
+    stroke-width: 0.5;
+  }
+  .caption { margin-top: 14px; font-size: 0.85rem; color: #8b949e; text-align: center; max-width: 600px; }
+</style>
+</head>
+<body>
+  <h1>AR ANNOTATION — SITE MEASUREMENT OVERLAY</h1>
+  <div class="stage" id="stage">
+    <img src="katas_raj_2.jpeg" alt="Heritage site" id="bgimg">
+    <svg id="overlay" viewBox="0 0 800 500" preserveAspectRatio="none"></svg>
+  </div>
+ <p class="caption">AR-style measurement overlay on Katas Raj Temple complex, showing estimated structural dimensions.</p>
+
+<script>
+
+const points = [
+  { x1: 120, y1: 380, x2: 340, y2: 380, label: "12.4 m" },   // base width
+  { x1: 340, y1: 380, x2: 340, y2: 160, label: "18.7 m" },   // height
+  { x1: 340, y1: 160, x2: 560, y2: 220, label: "9.2 m" },    // roofline span
+  { x1: 120, y1: 380, x2: 250, y2: 120, label: "diag 21.1 m"}
+];
+
+const svg = document.getElementById("overlay");
+
+points.forEach(p => {
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", p.x1);
+  line.setAttribute("y1", p.y1);
+  line.setAttribute("x2", p.x2);
+  line.setAttribute("y2", p.y2);
+  line.setAttribute("class", "ar-line");
+  svg.appendChild(line);
+
+  [[p.x1,p.y1],[p.x2,p.y2]].forEach(([cx,cy]) => {
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", cx);
+    c.setAttribute("cy", cy);
+    c.setAttribute("r", 4);
+    c.setAttribute("class", "node");
+    svg.appendChild(c);
+  });
+
+  const mx = (p.x1 + p.x2) / 2;
+  const my = (p.y1 + p.y2) / 2;
+  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  bg.setAttribute("x", mx - 28);
+  bg.setAttribute("y", my - 12);
+  bg.setAttribute("width", 60);
+  bg.setAttribute("height", 18);
+  bg.setAttribute("class", "label-bg");
+  svg.appendChild(bg);
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.setAttribute("x", mx - 24);
+  text.setAttribute("y", my + 1);
+  text.setAttribute("class", "label");
+  text.textContent = p.label;
+  svg.appendChild(text);
+});
+</script>
+</body>
+</html>
