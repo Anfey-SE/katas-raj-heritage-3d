@@ -181,7 +181,7 @@
             <svg class="ar-svg" viewBox="0 0 800 500" preserveAspectRatio="none" id="ar-overlay"></svg>
           </div>
           <div class="view-panel" id="panel-capture3d">
-            <iframe src="capture_to_3d_depth.html" title="Capture to 3D"></iframe>
+            <iframe data-src="capture_to_3d_depth.html" title="Capture to 3D"></iframe>
           </div>
         </div>
       </div>
@@ -249,6 +249,13 @@ tabs.forEach(tab => {
     Object.values(panels).forEach(p => p.classList.remove("active"));
     panels[tab.dataset.view].classList.add("active");
     document.getElementById("exhibit-caption").textContent = captions[tab.dataset.view];
+
+    // Lazy-load Exhibit C's iframe only on first click, not on initial page load —
+    // avoids paying the Three.js + blur-computation cost for visitors who never open it
+    if (tab.dataset.view === "capture3d") {
+      const iframe = panels.capture3d.querySelector("iframe");
+      if (!iframe.src) iframe.src = iframe.dataset.src;
+    }
   });
 });
 
