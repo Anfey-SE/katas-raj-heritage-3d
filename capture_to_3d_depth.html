@@ -12,7 +12,7 @@
 </head>
 <body>
 <div id="ui">CAPTURE-TO-3D · DEPTH RELIEF (FIRST PASS)</div>
-<div id="hint">Drag to orbit · scroll to zoom · relief generated from photo luminance</div>
+<div id="hint">Drag to orbit · right-click drag (or shift+drag) to pan · scroll to zoom · relief generated from photo luminance</div>
 <div id="loading">Building relief mesh…</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -100,10 +100,24 @@ img.onerror = () => {
 };
 img.src = PHOTO;
 
-let isDragging = false, prevX = 0, prevY = 0, rotY = 0.3, rotX = 0;
-renderer.domElement.addEventListener("mousedown", e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
-window.addEventListener("mouseup", () => isDragging = false);
+let isDragging = false, isPanning = false, prevX = 0, prevY = 0, rotY = 0.3, rotX = 0;
+let panX = 0, panY = 0.3; // pan target — lets the viewer walk through the scene, not just spin around it
+
+renderer.domElement.addEventListener("contextmenu", e => e.preventDefault()); // allow right-click drag for pan
+
+renderer.domElement.addEventListener("mousedown", e => {
+  if (e.button === 2 || e.shiftKey) { isPanning = true; } else { isDragging = true; }
+  prevX = e.clientX; prevY = e.clientY;
+});
+window.addEventListener("mouseup", () => { isDragging = false; isPanning = false; });
 window.addEventListener("mousemove", e => {
+  if (isPanning) {
+    panX -= (e.clientX - prevX) * 0.01;
+    panY += (e.clientY - prevY) * 0.01;
+    panY = Math.max(-1.5, Math.min(2.5, panY));
+    prevX = e.clientX; prevY = e.clientY;
+    return;
+  }
   if (!isDragging) return;
   rotY += (e.clientX - prevX) * 0.006;
   rotX += (e.clientY - prevY) * 0.006;
@@ -117,8 +131,9 @@ renderer.domElement.addEventListener("wheel", e => {
 function animate() {
   requestAnimationFrame(animate);
   rig.rotation.y = rotY;
+  camera.position.x = panX;
   camera.position.y = 3.2 - rotX * 3;
-  camera.lookAt(0, 0.3, 0);
+  camera.lookAt(panX, panY, 0);
   renderer.render(scene, camera);
 }
 animate();
