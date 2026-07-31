@@ -10,7 +10,7 @@ A field-survey-styled record of one heritage site, presented as three exhibits a
 
 - **Exhibit A — Photograph.** The primary field capture of the site.
 - **Exhibit B — AR Survey Lines.** A manually logged measurement overlay on the field photo, showing estimated structural spans between key points.
-- **Exhibit C — Capture-to-3D.** A first-pass depth-relief mesh generated from photo luminance (brighter pixels are displaced forward), rendered in Three.js. This is **not** a full photogrammetry reconstruction — it's an early-stage visualization step toward one, and is labeled as such in the UI ("Depth Relief · First Pass").
+- **Exhibit C — Capture-to-3D.** A first-pass depth-relief mesh generated from photo luminance (brighter pixels are displaced forward, then smoothed to remove per-pixel noise), rendered in Three.js with a soft contact shadow and a cinematic dolly-in on load. This is **not** a full photogrammetry reconstruction — it's an early-stage visualization step toward a walkable reconstruction, and is labeled as such in the UI ("Depth Relief · First Pass").
 
 Also included: a pretrained image classifier run against the field photographs (`ml_visualization_output.png`), and `RESEARCH.md`, a research log on 3D reconstruction methods considered for heritage sites.
 
@@ -25,6 +25,18 @@ Also included: a pretrained image classifier run against the field photographs (
 - Vanilla HTML/CSS/JS
 - Three.js r128 (CDN, no build step)
 - Deployed via Vercel
+
+## Module 23 revision (01 Aug 2026)
+
+This artifact was originally built in Module 10 and revised for certificate-readiness in Extension Sprint 5:
+
+- Added this README (previously missing)
+- Corrected a stale module reference in the UI (was showing "Module 10/18" from an earlier program structure)
+- Added pan controls to the Exhibit C viewer — previously orbit/zoom only, no way to move through the scene
+- Smoothed the depth-relief geometry (box blur on luminance before displacement) to remove noisy per-pixel bumps, while keeping the photo texture sharp
+- Added a soft contact shadow so the mesh reads as resting in the scene rather than floating
+- Added a slow cinematic dolly-in on load instead of an instant camera pop
+- Fixed a real performance bug: the Exhibit C iframe was loading unconditionally on every page visit, even for visitors who never opened that tab. It's now lazy-loaded only on first click, which stabilized and improved Lighthouse Performance scores.
 
 ## Files
 
