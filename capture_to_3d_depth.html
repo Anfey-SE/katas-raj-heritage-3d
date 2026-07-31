@@ -42,28 +42,68 @@ const grid = new THREE.GridHelper(14, 28, 0x1f3d38, 0x14231f);
 grid.position.y = -1.4;
 scene.add(grid);
 
+// Soft radial contact shadow so the mesh reads as resting in the scene, not floating above it
+const shadowCanvas = document.createElement("canvas");
+shadowCanvas.width = 256; shadowCanvas.height = 256;
+const shadowCtx = shadowCanvas.getContext("2d");
+const grad = shadowCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
+grad.addColorStop(0, "rgba(0,0,0,0.45)");
+grad.addColorStop(1, "rgba(0,0,0,0)");
+shadowCtx.fillStyle = grad;
+shadowCtx.fillRect(0, 0, 256, 256);
+const shadowTexture = new THREE.Texture(shadowCanvas);
+shadowTexture.needsUpdate = true;
+const shadowMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(6, 6),
+  new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false })
+);
+shadowMesh.rotation.x = -Math.PI / 2;
+shadowMesh.position.y = -1.39;
+scene.add(shadowMesh);
+
 const rig = new THREE.Group();
 scene.add(rig);
 
 const img = new Image();
 img.crossOrigin = "anonymous";
 img.onload = () => {
-  const w = 128, h = Math.round(128 * img.height / img.width);
+  const w = 160, h = Math.round(160 * img.height / img.width);
   const canvas = document.createElement("canvas");
   canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, w, h);
   const data = ctx.getImageData(0, 0, w, h).data;
 
+  // Raw per-pixel luminance is noisy — displacing geometry directly from it
+  // produces a jittery, static-like bump surface instead of a clean relief.
+  // Fix: compute luminance, then box-blur it before using it as depth.
+  // The photo texture (applied separately below at full resolution) stays sharp;
+  // only the underlying geometry is smoothed.
+  const lum = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const idx = i * 4;
+    lum[i] = (data[idx] * 0.299 + data[idx+1] * 0.587 + data[idx+2] * 0.114) / 255;
+  }
+  const radius = 2;
+  const smoothed = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sum = 0, count = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h) { sum += lum[ny * w + nx]; count++; }
+        }
+      }
+      smoothed[y * w + x] = sum / count;
+    }
+  }
+
   const geo = new THREE.PlaneGeometry(4.6, 4.6 * h / w, w - 1, h - 1);
   const pos = geo.attributes.position;
 
   for (let i = 0; i < pos.count; i++) {
-    const px = i % w;
-    const py = Math.floor(i / w);
-    const idx = (py * w + px) * 4;
-    const lum = (data[idx] * 0.299 + data[idx+1] * 0.587 + data[idx+2] * 0.114) / 255;
-    pos.setZ(i, lum * 0.9); // displacement = "depth"
+    pos.setZ(i, smoothed[i] * 0.9); // displacement = smoothed "depth"
   }
   geo.computeVertexNormals();
 
@@ -102,6 +142,7 @@ img.src = PHOTO;
 
 let isDragging = false, isPanning = false, prevX = 0, prevY = 0, rotY = 0.3, rotX = 0;
 let panX = 0, panY = 0.3; // pan target — lets the viewer walk through the scene, not just spin around it
+let camDist = 5.2, camDistCurrent = 9.5; // starts further back, eases in to camDist — gives a slow "arriving at the site" dolly-in instead of an instant pop
 
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault()); // allow right-click drag for pan
 
@@ -125,13 +166,15 @@ window.addEventListener("mousemove", e => {
   prevX = e.clientX; prevY = e.clientY;
 });
 renderer.domElement.addEventListener("wheel", e => {
-  camera.position.z = Math.max(2.5, Math.min(9, camera.position.z + e.deltaY * 0.006));
+  camDist = Math.max(2.5, Math.min(9, camDist + e.deltaY * 0.006));
 });
 
 function animate() {
   requestAnimationFrame(animate);
   rig.rotation.y = rotY;
   camera.position.x = panX;
+  camDistCurrent += (camDist - camDistCurrent) * 0.05; // eased zoom, also drives the intro dolly-in
+  camera.position.z = camDistCurrent;
   camera.position.y = 3.2 - rotX * 3;
   camera.lookAt(panX, panY, 0);
   renderer.render(scene, camera);
