@@ -8,15 +8,25 @@
   #ui { position: absolute; top: 14px; left: 16px; color: #35a897; font-size: 0.8rem; letter-spacing: 1px; z-index: 10; text-transform: uppercase; }
   #hint { position: absolute; bottom: 14px; left: 16px; color: #6b7a76; font-size: 0.68rem; z-index: 10; }
   #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #35a897; font-size: 0.8rem; z-index: 20; }
+  #depth-control { position: absolute; top: 14px; right: 16px; color: #35a897; font-size: 0.72rem; z-index: 10; text-transform: uppercase; letter-spacing: 1px; background: rgba(10,15,13,0.6); padding: 10px 14px; border: 1px solid #1f3d38; }
+  #depth-control label { display: block; margin-bottom: 6px; }
+  #depth-value { color: #9fe8da; }
+  #depth-slider { width: 160px; accent-color: #35a897; }
 </style>
 </head>
 <body>
 <div id="ui">CAPTURE-TO-3D · DEPTH RELIEF (FIRST PASS)</div>
-<div id="hint">Drag to orbit · right-click drag (or shift+drag) to pan · scroll to zoom · relief generated from photo luminance</div>
+<div id="hint">Drag to orbit · right-click drag (or shift+drag) to pan · scroll to zoom · adjust depth intensity top-right</div>
 <div id="loading">Building relief mesh…</div>
+<div id="depth-control">
+  <label>Depth Intensity: <span id="depth-value">0.90</span></label>
+  <input type="range" id="depth-slider" min="0" max="2" step="0.05" value="0.9">
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const PHOTO = "katas_raj_1.webp"; 
+let depthMultiplier = 0.9;
+let sharedGeo = null, smoothedDepth = null;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0f0d);
@@ -103,9 +113,11 @@ img.onload = () => {
   const pos = geo.attributes.position;
 
   for (let i = 0; i < pos.count; i++) {
-    pos.setZ(i, smoothed[i] * 0.9); // displacement = smoothed "depth"
+    pos.setZ(i, smoothed[i] * depthMultiplier); // displacement = smoothed "depth" × user-controlled intensity
   }
   geo.computeVertexNormals();
+  sharedGeo = geo;
+  smoothedDepth = smoothed;
 
   const texture = new THREE.Texture(canvas);
   texture.needsUpdate = true;
@@ -145,6 +157,20 @@ let panX = 0, panY = 0.3; // pan target — lets the viewer walk through the sce
 let camDist = 5.2, camDistCurrent = 9.5; // starts further back, eases in to camDist — gives a slow "arriving at the site" dolly-in instead of an instant pop
 
 renderer.domElement.addEventListener("contextmenu", e => e.preventDefault()); // allow right-click drag for pan
+
+const depthSlider = document.getElementById("depth-slider");
+const depthValueLabel = document.getElementById("depth-value");
+depthSlider.addEventListener("input", () => {
+  depthMultiplier = parseFloat(depthSlider.value);
+  depthValueLabel.textContent = depthMultiplier.toFixed(2);
+  if (!sharedGeo || !smoothedDepth) return; // mesh hasn't finished loading yet
+  const p = sharedGeo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    p.setZ(i, smoothedDepth[i] * depthMultiplier);
+  }
+  p.needsUpdate = true;
+  sharedGeo.computeVertexNormals();
+});
 
 renderer.domElement.addEventListener("mousedown", e => {
   if (e.button === 2 || e.shiftKey) { isPanning = true; } else { isDragging = true; }
