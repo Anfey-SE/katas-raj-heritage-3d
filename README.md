@@ -38,6 +38,16 @@ This artifact was originally built in Module 10 and revised for certificate-read
 - Added a slow cinematic dolly-in on load instead of an instant camera pop
 - Fixed a real performance bug: the Exhibit C iframe was loading unconditionally on every page visit, even for visitors who never opened that tab. It's now lazy-loaded only on first click, which stabilized and improved Lighthouse Performance scores.
 
+## Module 28 revision (08 Aug 2026)
+Performance fix for Extension Sprint 8:
+
+- Diagnosed a Lighthouse Performance score of 52, largely caused by an oversized hero image (2160×1346px served at a 673×495px display size) and a font-loading mismatch.
+- Converted hero images to WebP — improved score to 58, but Lighthouse's own diagnostics showed the image was still far larger than its display size.
+- Resized the hero image to 900px wide using Lanczos3 resampling — the correct fix, since compression alone wasn't enough.
+- Corrected a font-weight mismatch: the site was loading unused Fraunces/Inter weights while missing IBM Plex Mono 600, which the tabs and ledger values actually use (previously causing fake-bold rendering).
+- Result: Performance improved from 52 → 80. Accessibility, Best Practices, and SEO remained at 100 throughout.
+- Before/after Lighthouse screenshots: [linked in evidence folder](https://drive.google.com/drive/folders/1YghzmCT5SshKxxVxLpx_my8iEbNYTA2K?usp=sharing).
+
 ## Files
 
 | File | Purpose |
